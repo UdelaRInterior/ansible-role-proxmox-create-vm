@@ -2,19 +2,26 @@
 
 # Crear una KVM clonando un VM template Proxmox preexistente
 - name: Create a KVM by cloning a pre-existing Proxmox VM template
-  proxmox_kvm:
-    node: "{{ node }}"
-    api_user: "{{ api_user }}"
-    api_host: "{{ api_host }}"
-    api_password: "{{ api_password }}"
-    name: "{{ proxmox_hostname }}"
-    clone: "{{ clone_vm | default (omit) }}"            # The VM source
-    full: "{{ full_clone | default (omit) }}"
-    storage:  "{{ clone_storage | default (omit) }}"    # Target storage for full clone.
-    format: "{{ clone_format | default (omit) }}"       # Target drive's backing file's data format. Used only with clone
-    timeout: "{{ pve_timeout }}"                      # Cloning can take a while
-    target: "{{ clone_target }}"                        # Target node
-    vmid: "{{ clone_vmid | default (omit) }}"           # VM source id
-    newid: "{{ clone_newid | default (omit) }}"         # Clone id
-  register: virtualm
-  delegate_to: "{{ api_host }}"
+  community.general.proxmox_kvm:
+    node: "{{ pve_node }}"
+    api_host: "{{ pve_api_host }}"
+    api_user: "{{ pve_api_user | default(omit) }}"
+    api_password: "{{ pve_api_password | default(omit) }}"
+    api_token_id: "{{ pve_api_token_id | default(omit) }}"
+    api_token_secret: "{{ pve_api_token_secret | default(omit) }}"
+    proxmox_default_behavior: "{{ pve_kvm_proxmox_default_behavior | default('compatibility') }}"
+    validate_certs: "{{ pve_kvm_validate_certs | default(omit) }}"
+    name: "{{ pve_hostname }}"
+    vmid: "{{ pve_kvm_clone_vmid | default(omit) }}"
+    timeout: "{{ pve_kvm_timeout | default(omit) }}"
+    clone: "{{ pve_kvm_clone_vm | default(omit) }}"
+    snapname: "{{ pve_kvm_clone_snapname | default(omit) }}"
+    full: "{{ pve_kvm_clone_full | default(omit) }}"
+    storage:  "{{ pve_kvm_clone_storage | default(omit) }}"
+    format: "{{ pve_kvm_clone_format | default(omit) }}"
+    target: "{{ pve_kvm_clone_target | default(omit) }}"
+    newid: "{{ pve_kvm_clone_newid | default(omit) }}"
+  register: pve_kvm_virtual_created
+  delegate_to: "{{ pve_api_host }}"
+
+...

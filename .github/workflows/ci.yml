@@ -10,13 +10,14 @@ jobs:
   build:
 
     # Machine environment:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
     - name: install ansible-lint
       run: |
-       pip install --upgrade setuptools wheel
-       pip install ansible-lint
+       pip3 install --upgrade setuptools wheel
+       pip3 install ansible==2.10
+       pip3 install ansible-lint
     - uses: actions/checkout@v2
     - name: lint role files
       run: ~/.local/bin/ansible-lint -x 204 -v .

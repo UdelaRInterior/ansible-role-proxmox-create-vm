@@ -1,35 +1,46 @@
 ---
-# proxmox_create_kvm: creation of a complete virtual machine in proxmox cluster
-# tasks file for ansible-role-proxmox-create-kvm/
+# proxmox_create_kvm: creation or clone of a complete virtual machine in a Proxmox VE node
 
 - include_tasks: dependencies.yml
 
 - include_tasks: create_kvm.yml
-  when: not clone_from_existing | bool
+  when: not pve_kvm_clone_from_existing | bool
 
 - include_tasks: clone_kvm.yml
-  when: clone_from_existing | bool
+  when: pve_kvm_clone_from_existing | bool
 
-# Extraer el número de VM
-- name: Extract the ID of the VM
-  shell: |
+# Extraer el ID de la máquina virtual
+- name: Extract the virtual machine ID
+  ansible.builtin.shell: |
     set -o pipefail
-    qm list | grep -w "{{ proxmox_hostname }}" | awk '{ print $1 }'
+    qm list | grep -w "{{ pve_hostname }}" | awk '{ print $1 }'
   args:
     executable: /bin/bash
-  delegate_to: "{{ api_host }}"
-  register: VMID
-  when: virtualm is succeeded
   changed_when: false
+  delegate_to: "{{ pve_api_host }}"
+  register: pve_kvm_extracted_vmid
+  when:
+    - pve_kvm_vmid is not defined
+    - pve_kvm_clone_newid is not defined
+    - pve_kvm_virtual_created is succeeded
 
-# Encender la VM
-- name: Turn on the VM
-  proxmox_kvm:
-    node: "{{ node }}"
-    api_user: "{{ api_user }}"
-    api_host: "{{ api_host }}"
-    api_password: "{{ api_password }}"
-    vmid: "{{ VMID.stdout }}"
+# Establecer variable con el VMID correspondiente para la máquina virtual en caso de que no haya sido definido
+- name: Set variable with the corresponding VMID for the virtual machine in case it has not been defined
+  ansible.builtin.set_fact:
+    pve_kvm_inferred_vmid: "{{ pve_kvm_clone_newid if(pve_kvm_clone_newid is defined and pve_kvm_clone_from_existing) else ( pve_kvm_vmid if (pve_kvm_vmid is defined) else pve_kvm_extracted_vmid.stdout ) }}"
+
+# Asegurarse de que la máquina virtual esté encendida
+- name: Ensure the virtual machine is turned on
+  community.general.proxmox_kvm:
+    node: "{{ pve_node }}"
+    api_host: "{{ pve_api_host }}"
+    api_user: "{{ pve_api_user | default(omit) }}"
+    api_password: "{{ pve_api_password | default(omit) }}"
+    api_token_id: "{{ pve_api_token_id | default(omit) }}"
+    api_token_secret: "{{ pve_api_token_secret | default(omit) }}"
+    vmid: "{{ pve_kvm_inferred_vmid }}"
     state: started
-  delegate_to: "{{ api_host }}"
-  when: start_after_create | bool
+  delegate_to: "{{ pve_api_host }}"
+  when: pve_kvm_started_after_provision | bool
+
+...
